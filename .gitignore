@@ -1,0 +1,9 @@
+.DS_Store
+._.DS_Store
+.snakemake/
+analysis/
+benchmarks/
+deliverables/
+logs/
+raw_data/*
+!raw_data/.keep
