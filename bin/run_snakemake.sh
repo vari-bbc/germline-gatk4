@@ -1,5 +1,4 @@
-
-#PBS -l walltime=72:00:00
+#PBS -l walltime=120:00:00
 #PBS -l mem=8gb
 #PBS -N variants_workflow
 #PBS -o logs/variants_workflow.o
