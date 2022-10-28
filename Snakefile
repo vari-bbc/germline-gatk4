@@ -211,7 +211,7 @@ rule bwamem:
     benchmark:
         "benchmarks/bwamem/{sample}.txt"
     params:
-        bwa_RG='"@RG\tID:{sample}\tLB:{sample}\tPL:ILLUMINA\tSM:{sample}"',
+        bwa_RG='"@RG\\tID:{sample}\\tLB:{sample}\\tPL:ILLUMINA\\tSM:{sample}"',
         bwa_idx=bwa_index,
         samblaster_params=lambda wildcards: "" if samples[samples['sample']==wildcards.sample]['se_or_pe'].values=="PE" else "--ignoreUnmated"
     threads: 16
