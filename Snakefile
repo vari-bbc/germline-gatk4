@@ -11,9 +11,6 @@ min_version("6.15.0")
 
 configfile: "bin/config.yaml"
 
-bamCoverage_binsize = 10
-
-
 ref_fa = config['ref']['sequence']
 ref_fai = config['ref']['fai']
 gtf = config['ref']['annotation']
@@ -25,7 +22,6 @@ if mito_chrom not in fai_parsed['chr'].values:
     raise Exception('{mito} not found in reference fai file.'.format(mito=mito_chrom))
 
 chroms_no_mito = ' '.join(fai_parsed[fai_parsed['chr'] != mito_chrom]['chr'].values)
-
 
 ##### load config and sample sheets #####
 samplesheet="bin/samples.tsv"
@@ -62,7 +58,8 @@ include: os.path.join(shared_snakemake_dir, "post_alignment/CollectAlignmentSumm
 rule all:
     input:
         "analysis/multiqc/multiqc_report.html",
-        expand("analysis/final/06_filter_vcf/all.merged.filt.PASS.{var_type}.vcf.gz.vt_peek.txt", var_type=["SNP", "INDEL"])
+        #expand("analysis/final/06_filter_vcf/all.merged.filt.PASS.{var_type}.vcf.gz.vt_peek.txt", var_type=["SNP", "INDEL"]),
+        "analysis/final/07_snpEff/all.merged.filt.PASS.vcf.gz"
 
 def get_orig_fastq(wildcards):
     if wildcards.read == "R1":
@@ -555,6 +552,37 @@ rule qualimap:
     shell:
         """
         qualimap bamqc -bam {input} --java-mem-size={resources.mem_gb}G --paint-chromosome-limits -outdir analysis/qualimap/{wildcards.sample} -nt {threads}
+
+        """
+
+rule snpEff:
+    """
+    Concatenate SNPs and indels and run snpEff.
+    """
+    input:
+        vcfs=expand("analysis/final/06_filter_vcf/all.merged.filt.PASS.{var_type}.vcf.gz", var_type=["SNP", "INDEL"]),
+    output:
+        html="analysis/final/07_snpEff/snpEff.html",
+        vcf="analysis/final/07_snpEff/all.merged.filt.PASS.vcf.gz"
+    log:
+        stdout="logs/final/07_snpEff/out.o",
+        stderr="logs/final/07_snpEff/err.e"
+    benchmark:
+        "benchmarks/final/07_snpEff/bench.txt"
+    envmodules:
+        config['modules']['snpEff'],
+        config['modules']['bcftools']
+    params:
+        snpEff_dataDir=f'-dataDir config["ref"]["snpEff_dataDir"]' if config['ref']['snpEff_dataDir'] else "",
+        snpEff_genome_id=config['ref']['snpEff_genome_ID']
+    resources:
+        mem_gb=100
+    threads: 8
+    shell:
+        """
+        bcftools concat --threads {threads} {input.vcfs} | java -Xms8g -Xmx80g -Djava.io.tmpdir=./tmp -jar $SNPEFF/snpEff.jar {params.snpEff_dataDir} -v -stats {output.html} {params.snpEff_genome_id} - | bcftools view --threads {threads} -O z -o {output.vcf} -
+
+        bcftools index --tbi --threads {threads} {output.vcf}
 
         """
 

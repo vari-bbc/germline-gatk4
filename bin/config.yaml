@@ -10,11 +10,14 @@ ref:
     mito_chr: MtDNA
     known_snps: "" # if empty, workflow will run do a 'bootstrap' run to generate high quality variants
     known_indels: "" # if empty, workflow will run do a 'bootstrap' run to generate high quality variants
+    snpEff_dataDir: "./data/"
+    snpEff_genome_ID: "WBcel235.86"
 
 shared_snakemake_repo: "/secondary/projects/bbc/research/shared_snakemake/"
 
 modules:
   bamtools: bbc/bamtools/bamtools-2.5.1
+  bcftools: bbc/bcftools/bcftools-1.12 
   bedops: bbc/bedops/bedops-2.4.37
   bedtools: bbc/bedtools/bedtools-2.29.2
   bwa: bbc/bwa/bwa-0.7.17
@@ -27,6 +30,6 @@ modules:
   R: bbc/R/R-4.1.0-setR_LIBS_USER
   samblaster: bbc/samblaster/samblaster-0.1.24
   samtools: bbc/samtools/samtools-1.9
-  snpeff: bbc/SnpEff/SnpEff-4.3t
+  snpEff: bbc/SnpEff/SnpEff-4.3t
   trim_galore: bbc/trim_galore/trim_galore-0.6.0
   vt: bbc/vt/vt-0.1.16
