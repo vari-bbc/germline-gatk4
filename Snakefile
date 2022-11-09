@@ -62,7 +62,7 @@ include: os.path.join(shared_snakemake_dir, "post_alignment/CollectAlignmentSumm
 rule all:
     input:
         "analysis/multiqc/multiqc_report.html",
-        expand("analysis/filter_vcf/all.merged.filt.PASS.{var_type}.vcf.gz.vt_peek.txt", var_type=["SNP", "INDEL"])
+        expand("analysis/final/06_filter_vcf/all.merged.filt.PASS.{var_type}.vcf.gz.vt_peek.txt", var_type=["SNP", "INDEL"])
 
 def get_orig_fastq(wildcards):
     if wildcards.read == "R1":
@@ -259,14 +259,14 @@ rule bwamem:
 
 rule haplotypecaller:
     input:
-        bam="analysis/bwamem/{sample}.bam"
+        bam=lambda wildcards: "analysis/bwamem/{sample}.bam" if wildcards.round == "bqsr" else "analysis/final/00_BQSR/{sample}.bqsr.bam"
     output:
-        "analysis/haplotypecaller/{sample}.{contig_group}.g.vcf.gz"
+        "analysis/{round}/01_haplotypecaller/{sample}.{contig_group}.g.vcf.gz"
     log:
-        stdout="logs/haplotypecaller/{sample}.{contig_group}.o",
-        stderr="logs/haplotypecaller/{sample}.{contig_group}.e"
+        stdout="logs/{round}/01_haplotypecaller/{sample}.{contig_group}.o",
+        stderr="logs/{round}/01_haplotypecaller/{sample}.{contig_group}.e"
     benchmark:
-        "benchmarks/haplotypecaller/{sample}.{contig_group}.txt"
+        "benchmarks/{round}/01_haplotypecaller/{sample}.{contig_group}.txt"
     params:
         dbsnp=lambda wildcards: f'--dbsnp {config["ref"]["known_snps"]}' if config["ref"]["known_snps"] != "" else "",
         ref_fasta=config["ref"]["sequence"],
@@ -292,16 +292,16 @@ rule haplotypecaller:
 
 rule combinevar:
     input:
-        lambda wildcards: expand("analysis/haplotypecaller/{sample}.{contig_group}.g.vcf.gz", sample=samples['sample'].unique(), contig_group=wildcards.contig_group)
+        lambda wildcards: expand("analysis/{{round}}/01_haplotypecaller/{sample}.{contig_group}.g.vcf.gz", sample=samples['sample'].unique(), contig_group=wildcards.contig_group)
 
     output:
-        touch=touch("analysis/combinevar/{contig_group}.done"),
-        genomicsdb=directory("analysis/combinevar/{contig_group}.genomicsdb"),
+        touch=touch("analysis/{round}/02_combinevar/{contig_group}.done"),
+        genomicsdb=directory("analysis/{round}/02_combinevar/{contig_group}.genomicsdb"),
     log:
-        stdout="logs/combinevar/all.{contig_group}.o",
-        stderr="logs/combinevar/all.{contig_group}.e"
+        stdout="logs/{round}/02_combinevar/all.{contig_group}.o",
+        stderr="logs/{round}/02_combinevar/all.{contig_group}.e"
     benchmark:
-        "benchmarks/combinevar/{contig_group}.txt"
+        "benchmarks/{round}/02_combinevar/{contig_group}.txt"
     params:
         sample_gvcfs = lambda wildcards, input: list(map("-V {}".format, input)),
         contigs = lambda wildcards: "-L " + contig_groups[contig_groups.name == wildcards.contig_group]['contigs'].values[0].replace(",", " -L "),
@@ -321,17 +321,17 @@ rule combinevar:
 
 rule jointgeno:
     input:
-        "analysis/combinevar/{contig_group}.done"
+        "analysis/{round}/02_combinevar/{contig_group}.done"
     output:
-        vcf="analysis/jointgeno/all.{contig_group}.vcf.gz",
+        vcf="analysis/{round}/03_jointgeno/all.{contig_group}.vcf.gz",
     log:
-        stdout="logs/jointgeno/all.{contig_group}.o",
-        stderr="logs/jointgeno/all.{contig_group}.e"
+        stdout="logs/{round}/03_jointgeno/all.{contig_group}.o",
+        stderr="logs/{round}/03_jointgeno/all.{contig_group}.e"
     benchmark:
-        "benchmarks/jointgeno/all.{contig_group}.txt"
+        "benchmarks/{round}/03_jointgeno/all.{contig_group}.txt"
     params:
         ref_fasta=config["ref"]["sequence"],
-        genomicsdb="analysis/combinevar/{contig_group}.genomicsdb"
+        genomicsdb="analysis/{round}/02_combinevar/{contig_group}.genomicsdb"
     envmodules:
         config["modules"]["gatk"]
     threads: 4
@@ -351,14 +351,14 @@ rule sortVCF:
     Sort the output VCFs from joint genotyping. Merging errors out sometimes if we do not do this step.
     """
     input:
-        vcf="analysis/jointgeno/all.{contig_group}.vcf.gz",
+        vcf="analysis/{round}/03_jointgeno/all.{contig_group}.vcf.gz",
     output:
-        sorted_vcf="analysis/sortvcf/all.{contig_group}.sort.vcf.gz"
+        sorted_vcf="analysis/{round}/04_sortvcf/all.{contig_group}.sort.vcf.gz"
     log:
-        stdout="logs/sortvcf/all.{contig_group}.o",
-        stderr="logs/sortvcf/all.{contig_group}.e"
+        stdout="logs/{round}/04_sortvcf/all.{contig_group}.o",
+        stderr="logs/{round}/04_sortvcf/all.{contig_group}.e"
     benchmark:
-        "benchmarks/sortvcf/all.{contig_group}.txt"
+        "benchmarks/{round}/04_sortvcf/all.{contig_group}.txt"
     params:
         dictionary=config['ref']['dict'],
     envmodules:
@@ -380,15 +380,15 @@ rule merge_vcf:
     Merge the contig group VCFs into one unified VCF.
     """
     input:
-        expand("analysis/sortvcf/all.{contig_grp}.sort.vcf.gz", contig_grp=contig_groups.name)
+        expand("analysis/{{round}}/04_sortvcf/all.{contig_grp}.sort.vcf.gz", contig_grp=contig_groups.name)
     output:
-        raw="analysis/merge_vcf/all.merged.vcf.gz",
-        vt_peek_raw="analysis/filter_vcf/all.merged.vcf.gz.vt_peek.txt",
+        raw="analysis/{round}/05_merge_vcf/all.merged.vcf.gz",
+        vt_peek_raw="analysis/{round}/05_merge_vcf/all.merged.vcf.gz.vt_peek.txt",
     log:
-        stdout="logs/merge_vcf/out.o",
-        stderr="logs/merge_vcf/err.e"
+        stdout="logs/{round}/05_merge_vcf/out.o",
+        stderr="logs/{round}/05_merge_vcf/err.e"
     benchmark:
-        "benchmarks/merge_vcf/benchmark.txt"
+        "benchmarks/{round}/05_merge_vcf/benchmark.txt"
     params:
         ref_fasta=config["ref"]["sequence"],
         dictionary=config['ref']['dict'],
@@ -431,17 +431,17 @@ rule filter_vcf:
     Do quality filters. Use different paramters depending on SNPs verus indels ('SNP' or 'INDEL').
     """
     input:
-        "analysis/merge_and_filter/all.merged.vcf.gz"
+        "analysis/{round}/05_merge_vcf/all.merged.vcf.gz"
     output:
-        raw="analysis/filter_vcf/all.merged.{var_type}.vcf.gz",
-        filt="analysis/filter_vcf/all.merged.filt.{var_type}.vcf.gz",
-        pass_only="analysis/filter_vcf/all.merged.filt.PASS.{var_type}.vcf.gz",
-        vt_peek_pass="analysis/filter_vcf/all.merged.filt.PASS.{var_type}.vcf.gz.vt_peek.txt"
+        raw="analysis/{round}/06_filter_vcf/all.merged.{var_type}.vcf.gz",
+        filt="analysis/{round}/06_filter_vcf/all.merged.filt.{var_type}.vcf.gz",
+        pass_only="analysis/{round}/06_filter_vcf/all.merged.filt.PASS.{var_type}.vcf.gz",
+        vt_peek_pass="analysis/{round}/06_filter_vcf/all.merged.filt.PASS.{var_type}.vcf.gz.vt_peek.txt"
     log:
-        stdout="logs/filter_vcf/{var_type}.o",
-        stderr="logs/filter_vcf/{var_type}.e"
+        stdout="logs/{round}/06_filter_vcf/{var_type}.o",
+        stderr="logs/{round}/06_filter_vcf/{var_type}.e"
     benchmark:
-        "benchmarks/filter_vcf/{var_type}.txt"
+        "benchmarks/{round}/06_filter_vcf/{var_type}.txt"
     params:
         ref_fasta=config["ref"]["sequence"],
         filt_params=get_filt_params
@@ -483,6 +483,54 @@ rule filter_vcf:
         echo "SelectVariants 2 done." >> {log.stderr}
 
         vt peek -r {params.ref_fasta} {output.pass_only} 2> {output.vt_peek_pass} 1>>{log.stdout}
+        """
+
+rule BQSR:
+    """
+    Base quality score recalibrator
+    """
+    input:
+        bam="analysis/bwamem/{sample}.bam",
+        known_snps_vcf=config["ref"]["known_snps"] if config["ref"]["known_snps"] else "analysis/bqsr/06_filter_vcf/all.merged.filt.PASS.SNP.vcf.gz",
+        known_indels_vcf=config["ref"]["known_indels"] if config["ref"]["known_indels"] else "analysis/bqsr/06_filter_vcf/all.merged.filt.PASS.INDEL.vcf.gz",
+    output:
+        recal_table="analysis/final/00_BQSR/{sample}.bqsr.table",
+        recal_bam="analysis/final/00_BQSR/{sample}.bqsr.bam"
+    log:
+        stdout="logs/final/00_BQSR/{sample}.o",
+        stderr="logs/final/00_BQSR/{sample}.e"
+    benchmark:
+        "benchmarks/final/00_BQSR/{sample}.txt"
+    params:
+        ref_fasta=config["ref"]["sequence"],
+    envmodules:
+        config["modules"]["gatk"],
+    threads: 4
+    resources: 
+        mem_gb = 80
+    shell:
+        """
+        gatk --java-options "-Xms8g -Xmx{resources.mem_gb}g -Djava.io.tmpdir=./tmp" \
+        BaseRecalibrator \
+        -R {params.ref_fasta} \
+        -I {input.bam} \
+        --known-sites {input.known_snps_vcf} \
+        --known-sites {input.known_indels_vcf} \
+        -O {output.recal_table} 
+ 
+        echo "BaseRecalibrator done." >> {log.stdout}
+        echo "BaseRecalibrator done." >> {log.stderr}
+        
+        gatk --java-options "-Xms8g -Xmx{resources.mem_gb}g -Djava.io.tmpdir=./tmp" \
+        ApplyBQSR \
+        -R {params.ref_fasta} \
+        -I {input.bam} \
+        -bqsr {output.recal_table} \
+        -O {output.recal_bam}
+
+        echo "ApplyBQSR done." >> {log.stdout}
+        echo "ApplyBQSR done." >> {log.stderr}
+
         """
 
 rule qualimap:

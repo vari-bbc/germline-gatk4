@@ -2,11 +2,14 @@ ref:
   # path/to/reference/gDNA.fasta
     sequence:       /varidata/research/projects/bbc/versioned_references/2022-10-06_14.25.40_v10/data/c.elegans-WBcel235/sequence/c.elegans-WBcel235.fa
     fai:            /varidata/research/projects/bbc/versioned_references/2022-10-06_14.25.40_v10/data/c.elegans-WBcel235/sequence/c.elegans-WBcel235.fa.fai
+    dict:           /varidata/research/projects/bbc/versioned_references/2022-10-06_14.25.40_v10/data/c.elegans-WBcel235/sequence/c.elegans-WBcel235.dict
   # path/to/bwa/index/directory
     index:          /varidata/research/projects/bbc/versioned_references/2022-10-06_14.25.40_v10/data/c.elegans-WBcel235/indexes/bwa/c.elegans-WBcel235
   # path/to/gtf/file/with/transcripts.gtf
     annotation:     /varidata/research/projects/bbc/versioned_references/2022-10-06_14.25.40_v10/data/c.elegans-WBcel235/annotation/c.elegans-WBcel235.gtf
     mito_chr: MtDNA
+    known_snps: "" # if empty, workflow will run do a 'bootstrap' run to generate high quality variants
+    known_indels: "" # if empty, workflow will run do a 'bootstrap' run to generate high quality variants
 
 shared_snakemake_repo: "/secondary/projects/bbc/research/shared_snakemake/"
 
@@ -26,3 +29,4 @@ modules:
   samtools: bbc/samtools/samtools-1.9
   snpeff: bbc/SnpEff/SnpEff-4.3t
   trim_galore: bbc/trim_galore/trim_galore-0.6.0
+  vt: bbc/vt/vt-0.1.16
