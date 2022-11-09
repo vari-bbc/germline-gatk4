@@ -62,7 +62,7 @@ include: os.path.join(shared_snakemake_dir, "post_alignment/CollectAlignmentSumm
 rule all:
     input:
         "analysis/multiqc/multiqc_report.html",
-        "analysis/merge_and_filter/all.merged.filt.PASS.vcf.gz.vt_peek.txt"
+        expand("analysis/filter_vcf/all.merged.filt.PASS.{var_type}.vcf.gz.vt_peek.txt", var_type=["SNP", "INDEL"])
 
 def get_orig_fastq(wildcards):
     if wildcards.read == "R1":
@@ -375,30 +375,26 @@ rule sortVCF:
         -SD {params.dictionary} 
         """
 
-rule merge_and_filter_vcf:
+rule merge_vcf:
     """
-    Merge the contig group VCFs into one unified VCF, and do quality filters. Some parameters adpated from https://github.com/gatk-workflows/gatk3-4-rnaseq-germline-snps-indels/blob/master/rna-germline-variant-calling.wdl.
+    Merge the contig group VCFs into one unified VCF.
     """
     input:
         expand("analysis/sortvcf/all.{contig_grp}.sort.vcf.gz", contig_grp=contig_groups.name)
     output:
-        raw="analysis/merge_and_filter/all.merged.vcf.gz",
-        filt="analysis/merge_and_filter/all.merged.filt.vcf.gz",
-        pass_only="analysis/merge_and_filter/all.merged.filt.PASS.vcf.gz",
-        vt_peek_raw="analysis/merge_and_filter/all.merged.vcf.gz.vt_peek.txt",
-        vt_peek_pass="analysis/merge_and_filter/all.merged.filt.PASS.vcf.gz.vt_peek.txt"
+        raw="analysis/merge_vcf/all.merged.vcf.gz",
+        vt_peek_raw="analysis/filter_vcf/all.merged.vcf.gz.vt_peek.txt",
     log:
-        stdout="logs/merge_and_filter/out.o",
-        stderr="logs/merge_and_filter/err.e"
+        stdout="logs/merge_vcf/out.o",
+        stderr="logs/merge_vcf/err.e"
     benchmark:
-        "benchmarks/merge_and_filter/benchmark.txt"
+        "benchmarks/merge_vcf/benchmark.txt"
     params:
         ref_fasta=config["ref"]["sequence"],
         dictionary=config['ref']['dict'],
         in_vcfs = lambda wildcards, input: ' '.join(['--INPUT ' + vcf for vcf in input]) 
     envmodules:
         config["modules"]["gatk"],
-        config["modules"]["vt"]
     threads: 4
     resources: 
         mem_gb = 80
@@ -410,37 +406,82 @@ rule merge_and_filter_vcf:
         --SEQUENCE_DICTIONARY {params.dictionary} \
         --OUTPUT {output.raw} 
         
-        echo "mergeVcfs done." >> {log.stdout}
-        echo "mergeVcfs done." >> {log.stderr}
         vt peek -r {params.ref_fasta} {output.raw} 2> {output.vt_peek_raw} 1>>{log.stdout}
+        """
+
+def get_filt_params (wildcards):
+    # parameters adapted from https://gencore.bio.nyu.edu/variant-calling-pipeline-gatk4/
+    if (wildcards.var_type == "SNP"):
+        return """--cluster-window-size 10 --cluster-size 3 \
+        --filter-name 'QD' --filter 'QD < 2.0' \
+        --filter-name 'FS' --filter 'FS > 60.0' \
+        --filter-name 'MQ_filter' --filter 'MQ < 40.0' \
+        --filter-name 'SOR_filter' --filter 'SOR > 4.0' \
+        --filter-name 'MQRankSum_filter' --filter 'MQRankSum < -12.5' \
+        --filter-name 'ReadPosRankSum_filter' --filter 'ReadPosRankSum < -8.0'"""
+    elif (wildcards.var_type == "INDEL"):
+        return """--filter-name 'QD' --filter 'QD < 2.0' \
+        --filter-name 'FS' --filter 'FS > 200.0' \
+        --filter-name 'SOR_filter' --filter 'SOR > 10.0'"""
+    else:
+        raise Exception("var_type wildcard must be either SNP or INDEL.")
+
+rule filter_vcf:
+    """
+    Do quality filters. Use different paramters depending on SNPs verus indels ('SNP' or 'INDEL').
+    """
+    input:
+        "analysis/merge_and_filter/all.merged.vcf.gz"
+    output:
+        raw="analysis/filter_vcf/all.merged.{var_type}.vcf.gz",
+        filt="analysis/filter_vcf/all.merged.filt.{var_type}.vcf.gz",
+        pass_only="analysis/filter_vcf/all.merged.filt.PASS.{var_type}.vcf.gz",
+        vt_peek_pass="analysis/filter_vcf/all.merged.filt.PASS.{var_type}.vcf.gz.vt_peek.txt"
+    log:
+        stdout="logs/filter_vcf/{var_type}.o",
+        stderr="logs/filter_vcf/{var_type}.e"
+    benchmark:
+        "benchmarks/filter_vcf/{var_type}.txt"
+    params:
+        ref_fasta=config["ref"]["sequence"],
+        filt_params=get_filt_params
+    envmodules:
+        config["modules"]["gatk"],
+        config["modules"]["vt"]
+    threads: 4
+    resources: 
+        mem_gb = 80
+    shell:
+        """
+        gatk SelectVariants \
+        -R {params.ref_fasta} \
+        -V {input} \
+        -selectType {wildcards.var_type} \
+        -o {output.raw}
+
+        echo "SelectVariants 1 done." >> {log.stdout}
+        echo "SelectVariants 1 done." >> {log.stderr}
+        
         gatk --java-options "-Xms8g -Xmx{resources.mem_gb}g -Djava.io.tmpdir=./tmp" \
         VariantFiltration \
         --R {params.ref_fasta} \
         --V {output.raw} \
-        --window 35 \
-        --cluster 3 \
-        --filter-name "FS" \
-        --filter "FS > 30.0" \
-        --filter-name "QD" \
-        --filter "QD < 2.0" \
-        --genotype-filter-name "GQ" \
-        --genotype-filter-expression "GQ < 15.0" \
-        --genotype-filter-name "DP" \
-        --genotype-filter-expression "DP < 10.0" \
+        {params.filt_params} \
         -O {output.filt} 
         
         echo "VariantFiltration done." >> {log.stdout}
         echo "VariantFiltration done." >> {log.stderr}
+
         gatk --java-options "-Xms8g -Xmx{resources.mem_gb}g -Djava.io.tmpdir=./tmp" \
         SelectVariants \
         -R {params.ref_fasta} \
         -V {output.filt} \
         --exclude-filtered \
-        --set-filtered-gt-to-nocall \
         -O {output.pass_only} 
         
-        echo "SelectVariants done." >> {log.stdout}
-        echo "SelectVariants done." >> {log.stderr}
+        echo "SelectVariants 2 done." >> {log.stdout}
+        echo "SelectVariants 2 done." >> {log.stderr}
+
         vt peek -r {params.ref_fasta} {output.pass_only} 2> {output.vt_peek_pass} 1>>{log.stdout}
         """
 
