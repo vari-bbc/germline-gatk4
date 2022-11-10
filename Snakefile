@@ -35,7 +35,6 @@ if not samples['sample'].is_unique:
 contigs_file = "bin/grouped_contigs.tsv"
 
 # read in file with col1 as contig group name and col2 as a commma separated list of contigs. This was written for use with GATK for splitting the variant calling steps by chromosome/contig. We group the unplaced contigs together since those tend to be small.
-# we read in this file even if not calling variants. Otherwise variant-calling rules relying on this file will cause an error.
 contig_groups = pd.read_table(contigs_file)
 
 # if SE data, error out
