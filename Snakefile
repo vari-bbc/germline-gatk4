@@ -585,11 +585,13 @@ rule snpEff:
     shell:
         """
         # merge
-        bcftools concat --threads {threads} --allow-overlaps -O z -o {output.merged_vcf} {input.vcfs} 
+        bcftools concat --threads {threads} --allow-overlaps -O z -o {output.merged_vcf} {input.vcfs}
+        sleep 1m # make sure the index is older than the vcf
         bcftools index --tbi --threads {threads} {output.merged_vcf}
         
         # annotate
         java -Xms8g -Xmx80g -Djava.io.tmpdir=./tmp -jar $SNPEFF/snpEff.jar {params.snpEff_dataDir} -v -stats {output.html} {params.snpEff_genome_id} {output.merged_vcf} | bcftools view --threads {threads} -O z -o {output.annot_vcf} -
+        sleep 1m # make sure the index is older than the vcf
         bcftools index --tbi --threads {threads} {output.annot_vcf}
 
         """
