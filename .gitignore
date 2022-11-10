@@ -4,6 +4,7 @@
 analysis/
 benchmarks/
 deliverables/
-logs/
+logs/*
+!logs/rulegraph.png
 raw_data/*
 !raw_data/.keep
