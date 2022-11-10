@@ -59,7 +59,7 @@ rule all:
     input:
         "analysis/multiqc/multiqc_report.html",
         #expand("analysis/final/06_filter_vcf/all.merged.filt.PASS.{var_type}.vcf.gz.vt_peek.txt", var_type=["SNP", "INDEL"]),
-        "analysis/final/07_snpEff/all.merged.filt.PASS.vcf.gz"
+        "analysis/final/07_snpEff/all.merged.filt.PASS.snpEff.vcf.gz"
 
 def get_orig_fastq(wildcards):
     if wildcards.read == "R1":
@@ -380,6 +380,7 @@ rule merge_vcf:
         expand("analysis/{{round}}/04_sortvcf/all.{contig_grp}.sort.vcf.gz", contig_grp=contig_groups.name)
     output:
         raw="analysis/{round}/05_merge_vcf/all.merged.vcf.gz",
+        raw_tbi="analysis/{round}/05_merge_vcf/all.merged.vcf.gz.tbi",
         vt_peek_raw="analysis/{round}/05_merge_vcf/all.merged.vcf.gz.vt_peek.txt",
     log:
         stdout="logs/{round}/05_merge_vcf/out.o",
@@ -392,6 +393,7 @@ rule merge_vcf:
         in_vcfs = lambda wildcards, input: ' '.join(['--INPUT ' + vcf for vcf in input]) 
     envmodules:
         config["modules"]["gatk"],
+        config["modules"]["vt"],
     threads: 4
     resources: 
         mem_gb = 80
@@ -450,11 +452,12 @@ rule filter_vcf:
         mem_gb = 80
     shell:
         """
-        gatk SelectVariants \
+        gatk --java-options "-Xms8g -Xmx{resources.mem_gb}g -Djava.io.tmpdir=./tmp" \
+        SelectVariants \
         -R {params.ref_fasta} \
         -V {input} \
-        -selectType {wildcards.var_type} \
-        -o {output.raw}
+        --select-type-to-include {wildcards.var_type} \
+        -O {output.raw}
 
         echo "SelectVariants 1 done." >> {log.stdout}
         echo "SelectVariants 1 done." >> {log.stderr}
@@ -563,7 +566,9 @@ rule snpEff:
         vcfs=expand("analysis/final/06_filter_vcf/all.merged.filt.PASS.{var_type}.vcf.gz", var_type=["SNP", "INDEL"]),
     output:
         html="analysis/final/07_snpEff/snpEff.html",
-        vcf="analysis/final/07_snpEff/all.merged.filt.PASS.vcf.gz"
+        genes="analysis/final/07_snpEff/snpEff.genes.txt",
+        merged_vcf="analysis/final/07_snpEff/all.merged.filt.PASS.vcf.gz",
+        annot_vcf="analysis/final/07_snpEff/all.merged.filt.PASS.snpEff.vcf.gz"
     log:
         stdout="logs/final/07_snpEff/out.o",
         stderr="logs/final/07_snpEff/err.e"
@@ -573,16 +578,20 @@ rule snpEff:
         config['modules']['snpEff'],
         config['modules']['bcftools']
     params:
-        snpEff_dataDir=f'-dataDir config["ref"]["snpEff_dataDir"]' if config['ref']['snpEff_dataDir'] else "",
+        snpEff_dataDir=f'-dataDir {config["ref"]["snpEff_dataDir"]}' if config['ref']['snpEff_dataDir'] else "",
         snpEff_genome_id=config['ref']['snpEff_genome_ID']
     resources:
         mem_gb=100
     threads: 8
     shell:
         """
-        bcftools concat --threads {threads} {input.vcfs} | java -Xms8g -Xmx80g -Djava.io.tmpdir=./tmp -jar $SNPEFF/snpEff.jar {params.snpEff_dataDir} -v -stats {output.html} {params.snpEff_genome_id} - | bcftools view --threads {threads} -O z -o {output.vcf} -
-
-        bcftools index --tbi --threads {threads} {output.vcf}
+        # merge
+        bcftools concat --threads {threads} --allow-overlaps -O z -o {output.merged_vcf} {input.vcfs} 
+        bcftools index --tbi --threads {threads} {output.merged_vcf}
+        
+        # annotate
+        java -Xms8g -Xmx80g -Djava.io.tmpdir=./tmp -jar $SNPEFF/snpEff.jar {params.snpEff_dataDir} -v -stats {output.html} {params.snpEff_genome_id} {output.merged_vcf} | bcftools view --threads {threads} -O z -o {output.annot_vcf} -
+        bcftools index --tbi --threads {threads} {output.annot_vcf}
 
         """
 
