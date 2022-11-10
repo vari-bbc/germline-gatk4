@@ -13,12 +13,12 @@ snakemake_module="bbc/snakemake/snakemake-6.15.0"
 module load $snakemake_module
 
 # make logs dir if it does not exist already. Without this, logs/ is automatically generate only after the first run of the pipeline
-logs_dir="logs/snakemake_runs"
+logs_dir="logs/"
 [[ -d $logs_dir ]] || mkdir -p $logs_dir
 
-snakemake --snakefile 'Snakefile' --dag | dot -Tpng > $logs_dir/dag_${PBS_JOBID}.png
-snakemake --snakefile 'Snakefile' --filegraph | dot -Tpng > $logs_dir/filegraph_${PBS_JOBID}.png
-snakemake --snakefile 'Snakefile' --rulegraph | dot -Tpng > $logs_dir/rulegraph_${PBS_JOBID}.png
+#snakemake --snakefile 'Snakefile' --dag | dot -Tpng > $logs_dir/dag.png
+#snakemake --snakefile 'Snakefile' --filegraph | dot -Tpng > $logs_dir/filegraph.png
+snakemake --snakefile 'Snakefile' --rulegraph | dot -Tpng > $logs_dir/rulegraph.png
 
 echo "Start snakemake workflow." >&1                   
 echo "Start snakemake workflow." >&2                   
