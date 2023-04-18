@@ -62,9 +62,9 @@ rule all:
 
 def get_orig_fastq(wildcards):
     if wildcards.read == "R1":
-            fastq = expand("raw_data/{fq}", fq = samples[samples["sample"] == wildcards.sample]["fq1"].values)
+            fastq = expand("raw_data/{fq}", fq = units[units["sample"] == wildcards.sample]["fq1"].values)
     elif wildcards.read == "R2":
-            fastq = expand("raw_data/{fq}", fq = samples[samples["sample"] == wildcards.sample]["fq2"].values)
+            fastq = expand("raw_data/{fq}", fq = units[units["sample"] == wildcards.sample]["fq2"].values)
     return fastq 
 
 rule rename_fastqs:
