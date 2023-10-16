@@ -31,14 +31,14 @@ snakemake \
 --snakefile 'Snakefile' \
 --use-envmodules \
 --jobs 100 \
---cluster "mkdir -p logs/{rule}; sbatch \
+--cluster "mkdir -p $logs_dir/{rule}; sbatch \
 -p ${SLURM_JOB_PARTITION} \
 --export=ALL \
 --ntasks {threads} \
 --mem={resources.mem_gb}G \
 -t 48:00:00 \
--o {log.stdout} \
--e {log.stderr}'"
+-o $logs_dir/{rule}/{resources.log_prefix}.o \
+-e $logs_dir/{rule}/{resources.log_prefix}.e" # SLURM hangs if output dir does not exist, so we create it before running sbatch on the snakemake jobs.
 
 echo "snakemake workflow done." >&1                   
 echo "snakemake workflow done." >&2       

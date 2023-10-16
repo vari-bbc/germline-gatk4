@@ -83,7 +83,8 @@ rule rename_fastqs:
     params:
     threads: 1
     resources:
-        mem_gb=8
+        mem_gb=8,
+        log_prefix=lambda wildcards: "_".join(wildcards)
     envmodules:
     shell:
         """
@@ -116,7 +117,8 @@ rule fastqc:
         config['modules']['fastqc']
     threads: 1
     resources:
-        mem_gb = 32
+        mem_gb = 32,
+        log_prefix=lambda wildcards: "_".join(wildcards)
     shell:
         """
         fastqc --outdir {params.outdir} {input}
@@ -141,7 +143,8 @@ rule fastq_screen:
         config['modules']['fastq_screen']
     threads: 8
     resources:
-        mem_gb = 32
+        mem_gb = 32,
+        log_prefix=lambda wildcards: "_".join(wildcards)
     shell:
         """
         fastq_screen --threads {threads} --outdir analysis/fastq_screen/ {input}
@@ -167,7 +170,8 @@ rule trim_galore_PE:
         config['modules']['trim_galore']
     threads: 4
     resources:
-        mem_gb = 64
+        mem_gb = 64,
+        log_prefix=lambda wildcards: "_".join(wildcards)
     shell:
         """
         trim_galore --paired {input} --output_dir analysis/trim_galore/ --cores {threads} --fastqc
@@ -193,7 +197,8 @@ rule trim_galore_SE:
         config['modules']['trim_galore']
     threads: 4
     resources:
-        mem_gb = 64
+        mem_gb = 64,
+        log_prefix=lambda wildcards: "_".join(wildcards)
     shell:
         """
         trim_galore {input} --output_dir analysis/trim_galore/ --cores {threads} --fastqc
@@ -222,7 +227,8 @@ rule bwamem:
         config['modules']['samblaster'],
         config['modules']['samtools'],
     resources:
-        mem_gb=180
+        mem_gb=180,
+        log_prefix=lambda wildcards: "_".join(wildcards)
     shell:
         """
         bwa mem \
@@ -272,7 +278,8 @@ rule haplotypecaller:
         config["modules"]["gatk"]
     threads: 4
     resources: 
-        mem_gb = 80
+        mem_gb = 80,
+        log_prefix=lambda wildcards: "_".join(wildcards)
     shell:
         """
         gatk --java-options "-Xms8g -Xmx{resources.mem_gb}g -Djava.io.tmpdir=./tmp" \
@@ -305,7 +312,8 @@ rule combinevar:
         config["modules"]["gatk"]
     threads: 4
     resources: 
-        mem_gb = 80
+        mem_gb = 80,
+        log_prefix=lambda wildcards: "_".join(wildcards)
     shell:
         """
         gatk --java-options "-Xms8g -Xmx{resources.mem_gb}g -Djava.io.tmpdir=./tmp" \
@@ -332,7 +340,8 @@ rule jointgeno:
         config["modules"]["gatk"]
     threads: 4
     resources: 
-        mem_gb = 80
+        mem_gb = 80,
+        log_prefix=lambda wildcards: "_".join(wildcards)
     shell:
         """
         gatk --java-options "-Xms8g -Xmx{resources.mem_gb}g -Djava.io.tmpdir=./tmp" \
@@ -361,7 +370,8 @@ rule sortVCF:
         config["modules"]["gatk"]
     threads: 4
     resources: 
-        mem_gb = 80
+        mem_gb = 80,
+        log_prefix=lambda wildcards: "_".join(wildcards)
     shell:
         """
         gatk --java-options "-Xms8g -Xmx{resources.mem_gb}g -Djava.io.tmpdir=./tmp" \
@@ -395,7 +405,8 @@ rule merge_vcf:
         config["modules"]["vt"],
     threads: 4
     resources: 
-        mem_gb = 80
+        mem_gb = 80,
+        log_prefix=lambda wildcards: "_".join(wildcards)
     shell:
         """
         gatk --java-options "-Xms8g -Xmx{resources.mem_gb}g -Djava.io.tmpdir=./tmp" \
@@ -448,7 +459,8 @@ rule filter_vcf:
         config["modules"]["vt"]
     threads: 4
     resources: 
-        mem_gb = 80
+        mem_gb = 80,
+        log_prefix=lambda wildcards: "_".join(wildcards)
     shell:
         """
         gatk --java-options "-Xms8g -Xmx{resources.mem_gb}g -Djava.io.tmpdir=./tmp" \
@@ -506,7 +518,8 @@ rule BQSR:
         config["modules"]["gatk"],
     threads: 4
     resources: 
-        mem_gb = 80
+        mem_gb = 80,
+        log_prefix=lambda wildcards: "_".join(wildcards)
     shell:
         """
         gatk --java-options "-Xms8g -Xmx{resources.mem_gb}g -Djava.io.tmpdir=./tmp" \
@@ -549,7 +562,8 @@ rule qualimap:
         config['modules']['qualimap']
     params:
     resources:
-        mem_gb=100
+        mem_gb=100,
+        log_prefix=lambda wildcards: "_".join(wildcards)
     threads: 8
     shell:
         """
@@ -580,7 +594,8 @@ rule snpEff:
         snpEff_dataDir=f'-dataDir {config["ref"]["snpEff_dataDir"]}' if config['ref']['snpEff_dataDir'] else "",
         snpEff_genome_id=config['ref']['snpEff_genome_ID']
     resources:
-        mem_gb=100
+        mem_gb=100,
+        log_prefix=lambda wildcards: "_".join(wildcards)
     threads: 8
     shell:
         """
@@ -629,7 +644,8 @@ rule multiqc:
         config['modules']['multiqc']
     threads: 4
     resources:
-        mem_gb=100
+        mem_gb=100,
+        log_prefix="MultiQC"
     shell:
         """
         multiqc \
