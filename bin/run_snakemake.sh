@@ -1,12 +1,14 @@
-#PBS -l walltime=120:00:00
-#PBS -l mem=8gb
-#PBS -N variants_workflow
-#PBS -o logs/variants_workflow.o
-#PBS -e logs/variants_workflow.e
+#!/bin/bash
+#SBATCH --export=NONE
+#SBATCH -J variants_workflow
+#SBATCH -o logs/variants_workflow.o
+#SBATCH -e logs/variants_workflow.e
+#SBATCH --time 120:00:00
+#SBATCH --mem=8G
 
 #set -euo pipefail
 
-cd ${PBS_O_WORKDIR}
+cd ${SLURM_SUBMIT_DIR}
 
 snakemake_module="bbc2/snakemake/snakemake-7.32.3"
 
@@ -29,12 +31,12 @@ snakemake \
 --snakefile 'Snakefile' \
 --use-envmodules \
 --jobs 100 \
---cluster "ssh ${PBS_O_LOGNAME}@submit 'module load $snakemake_module; cd ${PBS_O_WORKDIR}; qsub \
--q ${PBS_O_QUEUE} \
--V \
--l nodes=1:ppn={threads} \
--l mem={resources.mem_gb}gb \
--l walltime=48:00:00 \
+--cluster "mkdir -p logs/{rule}; sbatch \
+-p ${SLURM_JOB_PARTITION} \
+--export=ALL \
+--ntasks {threads} \
+--mem={resources.mem_gb}G \
+-t 48:00:00 \
 -o {log.stdout} \
 -e {log.stderr}'"
 

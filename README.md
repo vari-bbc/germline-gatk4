@@ -10,7 +10,7 @@ For now, for simplicity, we assume that each sample is a 'platform unit'.
 
 3. A file named `grouped_contigs.tsv` with a column named 'name' and a second column named 'contigs' containing comma-delimited sequence names (chromosome/contig names) is needed. You may run `Rscript group_contigs.R`.
 
-4. `qsub -q bbc bin/run_snakemake.sh`. 
+4. `sbatch -p bbc bin/run_snakemake.sh`. 
 
 # Workflow
 
