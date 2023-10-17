@@ -11,7 +11,7 @@ ref:
     known_snps: "" # if empty, workflow will run do a 'bootstrap' run to generate high quality variants
     known_indels: "" # if empty, workflow will run do a 'bootstrap' run to generate high quality variants
     snpEff_dataDir: "./data/"
-    snpEff_genome_ID: "WBcel235.86"
+    snpEff_genome_ID: "WBcel235.105"
 
 shared_snakemake_repo: "/secondary/projects/bbc/research/shared_snakemake/"
 
