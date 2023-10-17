@@ -4,7 +4,7 @@ set -e
 set -u
 set -o pipefail
 
-module load bbc/bcftools/bcftools-1.12
+module load bbc2/bcftools/bcftools-1.17
 
 
 file="analysis/final/07_snpEff/all.merged.filt.PASS.snpEff.vcf.gz"
