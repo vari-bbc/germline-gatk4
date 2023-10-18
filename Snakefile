@@ -75,9 +75,6 @@ rule rename_fastqs:
         get_orig_fastq
     output:
         "analysis/renamed_data/{sample}_{read}.fastq.gz"
-    log:
-        stdout="logs/rename_fastqs/{sample}_{read}.o",
-        stderr="logs/rename_fastqs/{sample}_{read}.e",
     benchmark:
         "benchmarks/rename_fastqs/{sample}_{read}.txt"
     params:
@@ -108,9 +105,6 @@ rule fastqc:
         zip="analysis/fastqc/{fq_pref}_fastqc.zip"
     params:
         outdir="analysis/fastqc/"
-    log:
-        stdout="logs/fastqc/{fq_pref}.o",
-        stderr="logs/fastqc/{fq_pref}.e"
     benchmark:
         "benchmarks/fastqc/{fq_pref}.txt"
     envmodules:
@@ -134,9 +128,6 @@ rule fastq_screen:
         html = "analysis/fastq_screen/{fq_pref}_screen.html",
         txt = "analysis/fastq_screen/{fq_pref}_screen.txt",
     params:
-    log:
-        stdout="logs/fastq_screen/{fq_pref}.o",
-        stderr="logs/fastq_screen/{fq_pref}.e"
     benchmark:
         "benchmarks/fastq_screen/{fq_pref}.txt"
     envmodules:
@@ -161,9 +152,6 @@ rule trim_galore_PE:
         expand("analysis/trim_galore/{{sample}}_R1{ext}", ext=[".fastq.gz_trimming_report.txt","_val_1_fastqc.html"]),
         expand("analysis/trim_galore/{{sample}}_R2{ext}", ext=[".fastq.gz_trimming_report.txt","_val_2_fastqc.html"]),
     params:
-    log:
-        stdout="logs/trim_galore/{sample}.o",
-        stderr="logs/trim_galore/{sample}.e"
     benchmark:
         "benchmarks/trim_galore/{sample}.txt"
     envmodules:
@@ -188,9 +176,6 @@ rule trim_galore_SE:
         "analysis/trim_galore/{sample}_R1.fastq.gz_trimming_report.txt",
         expand("analysis/trim_galore/{{sample}}_R1_trimmed_fastqc{ext}", ext=['.html','.zip']),
     params:
-    log:
-        stdout="logs/trim_galore/{sample}.o",
-        stderr="logs/trim_galore/{sample}.e"
     benchmark:
         "benchmarks/trim_galore/{sample}.txt"
     envmodules:
@@ -212,9 +197,6 @@ rule bwamem:
         outbai="analysis/bwamem/{sample}.bam.bai",
         idxstat="analysis/bwamem/{sample}.bam.idxstat",
         samblaster_err="analysis/bwamem/{sample}.samblaster.e",
-    log:
-        stdout="logs/bwamem/{sample}.o",
-        stderr="logs/bwamem/{sample}.e",
     benchmark:
         "benchmarks/bwamem/{sample}.txt"
     params:
@@ -264,9 +246,6 @@ rule haplotypecaller:
         bam=lambda wildcards: "analysis/bwamem/{sample}.bam" if wildcards.round == "bqsr" else "analysis/final/00_BQSR/{sample}.bqsr.bam"
     output:
         "analysis/{round}/01_haplotypecaller/{sample}.{contig_group}.g.vcf.gz"
-    log:
-        stdout="logs/{round}/01_haplotypecaller/{sample}.{contig_group}.o",
-        stderr="logs/{round}/01_haplotypecaller/{sample}.{contig_group}.e"
     benchmark:
         "benchmarks/{round}/01_haplotypecaller/{sample}.{contig_group}.txt"
     params:
@@ -300,9 +279,6 @@ rule combinevar:
     output:
         touch=touch("analysis/{round}/02_combinevar/{contig_group}.done"),
         genomicsdb=directory("analysis/{round}/02_combinevar/{contig_group}.genomicsdb"),
-    log:
-        stdout="logs/{round}/02_combinevar/all.{contig_group}.o",
-        stderr="logs/{round}/02_combinevar/all.{contig_group}.e"
     benchmark:
         "benchmarks/{round}/02_combinevar/{contig_group}.txt"
     params:
@@ -328,9 +304,6 @@ rule jointgeno:
         "analysis/{round}/02_combinevar/{contig_group}.done"
     output:
         vcf="analysis/{round}/03_jointgeno/all.{contig_group}.vcf.gz",
-    log:
-        stdout="logs/{round}/03_jointgeno/all.{contig_group}.o",
-        stderr="logs/{round}/03_jointgeno/all.{contig_group}.e"
     benchmark:
         "benchmarks/{round}/03_jointgeno/all.{contig_group}.txt"
     params:
@@ -359,9 +332,6 @@ rule sortVCF:
         vcf="analysis/{round}/03_jointgeno/all.{contig_group}.vcf.gz",
     output:
         sorted_vcf="analysis/{round}/04_sortvcf/all.{contig_group}.sort.vcf.gz"
-    log:
-        stdout="logs/{round}/04_sortvcf/all.{contig_group}.o",
-        stderr="logs/{round}/04_sortvcf/all.{contig_group}.e"
     benchmark:
         "benchmarks/{round}/04_sortvcf/all.{contig_group}.txt"
     params:
@@ -391,9 +361,6 @@ rule merge_vcf:
         raw="analysis/{round}/05_merge_vcf/all.merged.vcf.gz",
         raw_tbi="analysis/{round}/05_merge_vcf/all.merged.vcf.gz.tbi",
         vt_peek_raw="analysis/{round}/05_merge_vcf/all.merged.vcf.gz.vt_peek.txt",
-    log:
-        stdout="logs/{round}/05_merge_vcf/out.o",
-        stderr="logs/{round}/05_merge_vcf/err.e"
     benchmark:
         "benchmarks/{round}/05_merge_vcf/benchmark.txt"
     params:
@@ -415,7 +382,7 @@ rule merge_vcf:
         --SEQUENCE_DICTIONARY {params.dictionary} \
         --OUTPUT {output.raw} 
         
-        vt peek -r {params.ref_fasta} {output.raw} 2> {output.vt_peek_raw} 1>>{log.stdout}
+        vt peek -r {params.ref_fasta} {output.raw} 2> {output.vt_peek_raw}
         """
 
 def get_filt_params (wildcards):
@@ -446,9 +413,6 @@ rule filter_vcf:
         filt="analysis/{round}/06_filter_vcf/all.merged.filt.{var_type}.vcf.gz",
         pass_only="analysis/{round}/06_filter_vcf/all.merged.filt.PASS.{var_type}.vcf.gz",
         vt_peek_pass="analysis/{round}/06_filter_vcf/all.merged.filt.PASS.{var_type}.vcf.gz.vt_peek.txt"
-    log:
-        stdout="logs/{round}/06_filter_vcf/{var_type}.o",
-        stderr="logs/{round}/06_filter_vcf/{var_type}.e"
     benchmark:
         "benchmarks/{round}/06_filter_vcf/{var_type}.txt"
     params:
@@ -470,8 +434,8 @@ rule filter_vcf:
         --select-type-to-include {wildcards.var_type} \
         -O {output.raw}
 
-        echo "SelectVariants 1 done." >> {log.stdout}
-        echo "SelectVariants 1 done." >> {log.stderr}
+        echo "SelectVariants 1 done." >&1
+        echo "SelectVariants 1 done." >&2
         
         gatk --java-options "-Xms8g -Xmx{resources.mem_gb}g -Djava.io.tmpdir=./tmp" \
         VariantFiltration \
@@ -480,8 +444,8 @@ rule filter_vcf:
         {params.filt_params} \
         -O {output.filt} 
         
-        echo "VariantFiltration done." >> {log.stdout}
-        echo "VariantFiltration done." >> {log.stderr}
+        echo "VariantFiltration done." >&1
+        echo "VariantFiltration done." >&2
 
         gatk --java-options "-Xms8g -Xmx{resources.mem_gb}g -Djava.io.tmpdir=./tmp" \
         SelectVariants \
@@ -490,10 +454,10 @@ rule filter_vcf:
         --exclude-filtered \
         -O {output.pass_only} 
         
-        echo "SelectVariants 2 done." >> {log.stdout}
-        echo "SelectVariants 2 done." >> {log.stderr}
+        echo "SelectVariants 2 done." >&1
+        echo "SelectVariants 2 done." >&2
 
-        vt peek -r {params.ref_fasta} {output.pass_only} 2> {output.vt_peek_pass} 1>>{log.stdout}
+        vt peek -r {params.ref_fasta} {output.pass_only} 2> {output.vt_peek_pass}
         """
 
 rule BQSR:
@@ -507,9 +471,6 @@ rule BQSR:
     output:
         recal_table="analysis/final/00_BQSR/{sample}.bqsr.table",
         recal_bam="analysis/final/00_BQSR/{sample}.bqsr.bam"
-    log:
-        stdout="logs/final/00_BQSR/{sample}.o",
-        stderr="logs/final/00_BQSR/{sample}.e"
     benchmark:
         "benchmarks/final/00_BQSR/{sample}.txt"
     params:
@@ -530,8 +491,8 @@ rule BQSR:
         --known-sites {input.known_indels_vcf} \
         -O {output.recal_table} 
  
-        echo "BaseRecalibrator done." >> {log.stdout}
-        echo "BaseRecalibrator done." >> {log.stderr}
+        echo "BaseRecalibrator done." >&1
+        echo "BaseRecalibrator done." >&2
         
         gatk --java-options "-Xms8g -Xmx{resources.mem_gb}g -Djava.io.tmpdir=./tmp" \
         ApplyBQSR \
@@ -540,8 +501,8 @@ rule BQSR:
         -bqsr {output.recal_table} \
         -O {output.recal_bam}
 
-        echo "ApplyBQSR done." >> {log.stdout}
-        echo "ApplyBQSR done." >> {log.stderr}
+        echo "ApplyBQSR done." >&1
+        echo "ApplyBQSR done." >&2
 
         """
 
@@ -553,9 +514,6 @@ rule qualimap:
         "analysis/bwamem/{sample}.bam",
     output:
         touch("analysis/qualimap/{sample}/done")
-    log:
-        stdout="logs/qualimap/{sample}.o",
-        stderr="logs/qualimap/{sample}.e"
     benchmark:
         "benchmarks/qualimap/{sample}.txt"
     envmodules:
@@ -582,9 +540,6 @@ rule snpEff:
         genes="analysis/final/07_snpEff/snpEff.genes.txt",
         merged_vcf="analysis/final/07_snpEff/all.merged.filt.PASS.vcf.gz",
         annot_vcf="analysis/final/07_snpEff/all.merged.filt.PASS.snpEff.vcf.gz"
-    log:
-        stdout="logs/final/07_snpEff/out.o",
-        stderr="logs/final/07_snpEff/err.e"
     benchmark:
         "benchmarks/final/07_snpEff/bench.txt"
     envmodules:
@@ -595,7 +550,7 @@ rule snpEff:
         snpEff_genome_id=config['ref']['snpEff_genome_ID']
     resources:
         mem_gb=100,
-        log_prefix=lambda wildcards: "_".join(wildcards)
+        log_prefix="snpEff"
     threads: 8
     shell:
         """
@@ -625,9 +580,6 @@ rule multiqc:
         expand("analysis/qualimap/{sample.sample}/done", sample=samples.itertuples()),
     output:
         "analysis/multiqc/multiqc_report.html",
-    log:
-        stdout="logs/multiqc/multiqc.o",
-        stderr="logs/multiqc/multiqc.e"
     benchmark:
         "benchmarks/multiqc/multiqc.txt"
     params:
