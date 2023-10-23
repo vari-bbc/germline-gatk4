@@ -434,7 +434,7 @@ rule filter_vcf:
         --select-type-to-include {wildcards.var_type} \
         -O {output.raw}
 
-        echo "SelectVariants 1 done." >&1
+        echo "SelectVariants 1 done."
         echo "SelectVariants 1 done." >&2
         
         gatk --java-options "-Xms8g -Xmx{resources.mem_gb}g -Djava.io.tmpdir=./tmp" \
@@ -444,7 +444,7 @@ rule filter_vcf:
         {params.filt_params} \
         -O {output.filt} 
         
-        echo "VariantFiltration done." >&1
+        echo "VariantFiltration done."
         echo "VariantFiltration done." >&2
 
         gatk --java-options "-Xms8g -Xmx{resources.mem_gb}g -Djava.io.tmpdir=./tmp" \
@@ -454,7 +454,7 @@ rule filter_vcf:
         --exclude-filtered \
         -O {output.pass_only} 
         
-        echo "SelectVariants 2 done." >&1
+        echo "SelectVariants 2 done."
         echo "SelectVariants 2 done." >&2
 
         vt peek -r {params.ref_fasta} {output.pass_only} 2> {output.vt_peek_pass}
@@ -491,7 +491,7 @@ rule BQSR:
         --known-sites {input.known_indels_vcf} \
         -O {output.recal_table} 
  
-        echo "BaseRecalibrator done." >&1
+        echo "BaseRecalibrator done."
         echo "BaseRecalibrator done." >&2
         
         gatk --java-options "-Xms8g -Xmx{resources.mem_gb}g -Djava.io.tmpdir=./tmp" \
@@ -501,7 +501,7 @@ rule BQSR:
         -bqsr {output.recal_table} \
         -O {output.recal_bam}
 
-        echo "ApplyBQSR done." >&1
+        echo "ApplyBQSR done."
         echo "ApplyBQSR done." >&2
 
         """
