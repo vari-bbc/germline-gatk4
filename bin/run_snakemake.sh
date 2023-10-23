@@ -1,14 +1,16 @@
-#PBS -l walltime=120:00:00
-#PBS -l mem=8gb
-#PBS -N variants_workflow
-#PBS -o logs/variants_workflow.o
-#PBS -e logs/variants_workflow.e
+#!/bin/bash
+#SBATCH --export=NONE
+#SBATCH -J variants_workflow
+#SBATCH -o logs/variants_workflow.o
+#SBATCH -e logs/variants_workflow.e
+#SBATCH --time 120:00:00
+#SBATCH --mem=8G
 
 #set -euo pipefail
 
-cd ${PBS_O_WORKDIR}
+cd ${SLURM_SUBMIT_DIR}
 
-snakemake_module="bbc/snakemake/snakemake-6.15.0"
+snakemake_module="bbc2/snakemake/snakemake-7.32.3"
 
 module load $snakemake_module
 
@@ -29,14 +31,14 @@ snakemake \
 --snakefile 'Snakefile' \
 --use-envmodules \
 --jobs 100 \
---cluster "ssh ${PBS_O_LOGNAME}@submit 'module load $snakemake_module; cd ${PBS_O_WORKDIR}; qsub \
--q ${PBS_O_QUEUE} \
--V \
--l nodes=1:ppn={threads} \
--l mem={resources.mem_gb}gb \
--l walltime=48:00:00 \
--o {log.stdout} \
--e {log.stderr}'"
+--cluster "mkdir -p $logs_dir/{rule}; sbatch \
+-p ${SLURM_JOB_PARTITION} \
+--export=ALL \
+--ntasks {threads} \
+--mem={resources.mem_gb}G \
+-t 48:00:00 \
+-o $logs_dir/{rule}/{resources.log_prefix}.o \
+-e $logs_dir/{rule}/{resources.log_prefix}.e" # SLURM hangs if output dir does not exist, so we create it before running sbatch on the snakemake jobs.
 
 echo "snakemake workflow done." >&1                   
 echo "snakemake workflow done." >&2       

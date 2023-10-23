@@ -4,13 +4,14 @@ For now, for simplicity, we assume that each sample is a 'platform unit'.
 
 # Usage
 
-1. Fill out/Edit the `config.yaml` file.
+1. Fill out/Edit the `bin/config.yaml` file.
 
 2. Make samplesheet. You can go to the `bin/` folder and run `bash make_samples_template.sh`.
+Rename the output file `samples_template.tsv` as `samples.tsv`.
 
-3. A file named `grouped_contigs.tsv` with a column named 'name' and a second column named 'contigs' containing comma-delimited sequence names (chromosome/contig names) is needed. You may run `Rscript group_contigs.R`.
+3. A file named `grouped_contigs.tsv` with a column named 'name' and a second column named 'contigs' containing comma-delimited sequence names (chromosome/contig names) is needed. You may run `Rscript group_contigs.R` to generate this file based on the reference sequence listed in `config.yaml`.
 
-4. `qsub -q bbc bin/run_snakemake.sh`. 
+4. Submit job with `sbatch -p bbc bin/run_snakemake.sh`. 
 
 # Workflow
 
