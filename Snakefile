@@ -48,12 +48,6 @@ tmp_dir = os.path.join(snakemake_dir, "tmp")
 if not os.path.exists(tmp_dir):
     os.mkdir(tmp_dir)
 
-shared_snakemake_dir=config['shared_snakemake_repo'] + "/rules/"
-
-include: os.path.join(shared_snakemake_dir, "post_alignment/flagstat")
-include: os.path.join(shared_snakemake_dir, "post_alignment/CollectInsertSizeMetrics")
-include: os.path.join(shared_snakemake_dir, "post_alignment/CollectAlignmentSummaryMetrics")
-
 rule all:
     input:
         "analysis/multiqc/multiqc_report.html",
@@ -270,6 +264,76 @@ rule haplotypecaller:
         --native-pair-hmm-threads {threads} \
         {params.dbsnp} \
         {params.contigs}
+        """
+
+rule flagstat:
+    """
+    Run samtools flagstat.
+    """
+    input:
+        "analysis/{align_dirname}/{bam_name}.bam"
+    output:
+        "analysis/{align_dirname}/flagstat/{bam_name}.flagstat"
+    params:
+    benchmark:
+        "benchmarks/{align_dirname}/flagstat/{bam_name}.txt"
+    envmodules:
+        config['modules']['samtools']
+    threads: 8
+    resources: 
+        mem_gb = 32,
+        log_prefix=lambda wildcards: "_".join(wildcards)
+    shell:
+        """
+        samtools flagstat -@ {threads} {input} > {output}  
+        """
+
+rule CollectInsertSizeMetrics:
+    """
+    Run Picard CollectInsertSizeMetrics.
+    """
+    input:
+        "analysis/{align_dirname}/{bam_name}.bam"
+    output:
+        out="analysis/{align_dirname}/CollectInsertSizeMetrics/{bam_name}.insert_size_metrics.txt",
+        hist="analysis/{align_dirname}/CollectInsertSizeMetrics/{bam_name}.insert_size_histogram.pdf"
+    params:
+        temp="./analysis/{align_dirname}/CollectInsertSizeMetrics/"
+    benchmark:
+        "benchmarks/{align_dirname}/CollectInsertSizeMetrics/{bam_name}.txt"
+    envmodules:
+        config['modules']['picard']
+    threads: 4
+    resources: 
+        mem_gb = 64,
+        log_prefix=lambda wildcards: "_".join(wildcards)
+    shell:
+        """
+        java -Xms8g -Xmx{resources.mem_gb}g -Djava.io.tmpdir={params.temp} -jar $PICARD CollectInsertSizeMetrics I={input} O={output.out} H={output.hist}  
+        """
+
+rule CollectAlignmentSummaryMetrics:
+    """
+    Run Picard CollectAlignmentSummaryMetrics.
+    """
+    input:
+        "analysis/{align_dirname}/{bam_name}.bam"
+    output:
+        out="analysis/{align_dirname}/CollectAlignmentSummaryMetrics/{bam_name}.aln_metrics.txt",
+    params:
+        temp="./analysis/{align_dirname}/CollectAlignmentSummaryMetrics/",
+        reffasta=config["ref"]["sequence"]
+    benchmark:
+        "benchmarks/{align_dirname}/CollectAlignmentSummaryMetrics/{bam_name}.txt"
+    envmodules:
+        config['modules']['picard']
+    threads: 4
+    resources: 
+        mem_gb = 64,
+        log_prefix=lambda wildcards: "_".join(wildcards)
+    shell:
+        """
+        java -Xms8g -Xmx{resources.mem_gb}g -Djava.io.tmpdir={params.temp} -jar $PICARD CollectAlignmentSummaryMetrics I={input} O={output.out} R={params.reffasta}  
         """
 
 rule combinevar:
