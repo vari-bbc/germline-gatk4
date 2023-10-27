@@ -13,8 +13,6 @@ ref:
     snpEff_dataDir: "./data/"
     snpEff_genome_ID: "WBcel235.105"
 
-shared_snakemake_repo: "/secondary/projects/bbc/research/shared_snakemake/"
-
 modules:
   bamtools: bbc2/bamtools/bamtools-2.5.2
   bcftools: bbc2/bcftools/bcftools-1.17
